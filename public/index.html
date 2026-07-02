@@ -583,7 +583,6 @@ function renderChessTournaments(){
   }).join('') + `<div style="margin-top:.5rem"><a href="https://www.fide.com/calendar" target="_blank" style="color:var(--indigo2);font-size:.78rem">See full FIDE calendar →</a></div>`;
 }
 
-// ── MOVIES via TMDB (free key, get yours at themoviedb.org/settings/api) ──
 async function fetchMovies(){
   const loading = document.getElementById('movies-loading');
   if(TMDB_KEY === 'YOUR_TMDB_KEY_HERE'){
@@ -594,34 +593,30 @@ async function fetchMovies(){
     const langs = { kollywood:'ta', bollywood:'hi', tollywood:'te', hollywood:'en' };
     const results = {};
     await Promise.all(Object.entries(langs).map(async ([industry,lang])=>{
-      const r = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_original_language=${lang}&sort_by=primary_release_date.desc&primary_release_date.gte=${new Date().toISOString().split('T')[0]}&region=${lang==='en'?'US':'IN'}`);
+      const r = await fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${TMDB_KEY}&with_original_language=${lang}&sort_by=primary_release_date.desc&primary_release_date.gte=${new Date().toISOString().split('T')[0]}`);
       const d = await r.json();
-      results[industry] = (d.results||[]).slice(0,6);
+      results[industry] = (d.results||[]).slice(0,8);
     }));
     loading.style.display='none';
-    const all = [];
+
+    // Each industry tab shows ONLY its own movies
     ['kollywood','bollywood','tollywood','hollywood'].forEach(ind=>{
       const grid = document.getElementById('movies-grid-'+ind);
-      const movies = results[ind]||[];
-      all.push(...movies.map(m=>({...m, _industry:ind})));
-      grid.innerHTML = movies.map(m=>movieCardHTML(m,ind)).join('') || '<div style="color:var(--slate);padding:1rem">No upcoming releases found.</div>';
+      grid.innerHTML = (results[ind]||[]).map(m=>movieCardHTML(m,ind)).join('')
+        || '<div style="color:var(--slate);padding:1rem">No upcoming releases found.</div>';
     });
-    document.getElementById('movies-grid-all').innerHTML = all.map(m=>movieCardHTML(m,m._industry)).join('') || '<div style="color:var(--slate);padding:1rem">No films found.</div>';
+
+    // All tab shows every industry combined, grouped
+    const allGrid = document.getElementById('movies-grid-all');
+    let allHTML = '';
+    ['kollywood','bollywood','tollywood','hollywood'].forEach(ind=>{
+      (results[ind]||[]).forEach(m=>{ allHTML += movieCardHTML(m,ind); });
+    });
+    allGrid.innerHTML = allHTML || '<div style="color:var(--slate);padding:1rem">No films found.</div>';
+
   }catch(e){
     loading.innerHTML = 'Could not load movies right now.';
   }
-}
-function movieCardHTML(m,industry){
-  const poster = m.poster_path ? `https://image.tmdb.org/t/p/w300${m.poster_path}` : null;
-  const labelMap = {kollywood:'Kollywood',bollywood:'Bollywood',tollywood:'Tollywood',hollywood:'Hollywood'};
-  return `<div class="movie-card">
-    ${poster ? `<img class="movie-poster" src="${poster}" alt="${m.title}" loading="lazy"/>` : `<div class="movie-poster-placeholder">🎬</div>`}
-    <div class="movie-info">
-      <div class="movie-industry-badge badge-${industry}">${labelMap[industry]}</div>
-      <div class="movie-title">${m.title}</div>
-      <div class="movie-date">${m.release_date||'TBA'}</div>
-    </div>
-  </div>`;
 }
 
 // ── IEEE / JSSC — curated, edit dates as the year progresses ──
